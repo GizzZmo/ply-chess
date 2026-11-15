@@ -1,7 +1,7 @@
 import { Chess, type Color, type Square } from "chess.js"
 import { create } from "zustand"
 import { askEngine } from "./engine-client"
-import { LEVELS, type LevelId } from "./levels"
+import { FISH_LEVELS, LEVELS, type FishLevelId, type LevelId, type OpponentId } from "./levels"
 import {
   hasMatingMaterial,
   outcome,
@@ -31,6 +31,8 @@ type Game = {
   mode: Mode
   humanColor: Color
   level: LevelId
+  opponent: OpponentId
+  fishLevel: FishLevelId
   minutes: number
   autoFlip: boolean
   mute: boolean
@@ -52,6 +54,8 @@ type Game = {
   setMode: (mode: Mode) => void
   setHumanColor: (color: Color) => void
   setLevel: (level: LevelId) => void
+  setOpponent: (opponent: OpponentId) => void
+  setFishLevel: (level: FishLevelId) => void
   setMinutes: (minutes: number) => void
   setAutoFlip: (on: boolean) => void
   toggleMute: () => void
@@ -151,6 +155,8 @@ export const useGame = create<Game>((set, get) => ({
   mode: "engine",
   humanColor: "w",
   level: "club",
+  opponent: "stockfish",
+  fishLevel: "solid",
   minutes: 10,
   autoFlip: true,
   mute: false,
@@ -245,6 +251,10 @@ export const useGame = create<Game>((set, get) => ({
   },
 
   setLevel: (level) => set({ level }),
+
+  setOpponent: (opponent) => set({ opponent }),
+
+  setFishLevel: (level) => set({ fishLevel: level }),
 
   setMinutes: (minutes) => {
     if (get().minutes === minutes) return
@@ -389,6 +399,9 @@ export const useGame = create<Game>((set, get) => ({
     const mode: Mode = save.mode === "pass" || save.mode === "study" ? save.mode : "engine"
     const humanColor: Color = save.humanColor === "b" ? "b" : "w"
     const level: LevelId = save.level === "casual" || save.level === "sharp" ? save.level : "club"
+    const opponent: OpponentId = save.opponent === "ply" ? "ply" : "stockfish"
+    const fishLevel: FishLevelId =
+      save.fishLevel === "easy" || save.fishLevel === "strong" || save.fishLevel === "full" ? save.fishLevel : "solid"
     const minutes = save.minutes === 0 || save.minutes === 5 || save.minutes === 15 || save.minutes === 10 ? save.minutes : 10
     const orientation: Color = save.orientation === "b" ? "b" : "w"
     const status = save.status === "gameover" ? "gameover" : "playing"
@@ -400,6 +413,8 @@ export const useGame = create<Game>((set, get) => ({
       mode,
       humanColor,
       level,
+      opponent,
+      fishLevel,
       minutes,
       autoFlip: save.autoFlip !== false,
       mute: Boolean(save.mute),
@@ -424,4 +439,4 @@ export const useGame = create<Game>((set, get) => ({
   },
 }))
 
-export { LEVELS }
+export { FISH_LEVELS, LEVELS }

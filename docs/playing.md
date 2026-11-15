@@ -45,7 +45,9 @@ The move list is the whole game. The highlighted ply is the one on the board. **
 
 ## Stockfish
 
-Turn **Stockfish** on in the side panel. A bar appears beside the board. The number is from White’s point of view (`+0.39` is a small White edge, `+M3` is mate in three). Three lines show the moves Stockfish is considering. Tap one to play its first move, if it is your turn. Depth 10 is faster, 18 looks further. The graph fills in as you play, once at least two positions have a score. Hint replaces the faint arrow with your hint arrow.
+On the Engine table, set **Opponent** to Stockfish. Easy is about 1320 Elo, Solid about 1800, Strong about 2500. Full searches without a rating cap, for a little over a second. Built-in is the smaller engine, which follows the opening book.
+
+The side panel can also show Stockfish’s evaluation while you play. A bar appears beside the board. The number is from White’s point of view (`+0.39` is a small White edge, `+M3` is mate in three). Three lines show the moves it is considering. Tap one to play its first move, if it is your turn. Turn this panel off for a serious game, because it shows the best move. Depth 10 is faster, 18 looks further. The graph fills in once at least two positions have a score.
 
 ## Who is who
 

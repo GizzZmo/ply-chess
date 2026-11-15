@@ -234,3 +234,105 @@ export function useStockfish(fen: string, enabled: boolean, depth: number): SfAn
   if (!enabled) return EMPTY
   return state
 }
+
+export type StockfishMove = { from: string; to: string; promotion?: string }
+
+class Player {
+  private worker: Worker | null = null
+  private booted = false
+  private busy = false
+  private elo: number | null | undefined = undefined
+  private afterReady: (() => void) | null = null
+  private job: { fen: string; movetime: number; resolve: (move: StockfishMove | null) => void } | null = null
+  private queued: {
+    fen: string
+    elo: number | null
+    movetime: number
+    resolve: (move: StockfishMove | null) => void
+  } | null = null
+
+  constructor() {
+    this.worker = new Worker(stockfishWorkerUrl())
+    this.worker.onerror = () => this.fail()
+    this.worker.onmessage = (event: MessageEvent<unknown>) => {
+      if (typeof event.data === "string") this.onLine(event.data)
+    }
+    this.worker.postMessage("uci")
+  }
+
+  ask(fen: string, elo: number | null, movetime: number): Promise<StockfishMove | null> {
+    return new Promise((resolve) => {
+      if (this.queued) this.queued.resolve(null)
+      this.queued = { fen, elo, movetime, resolve }
+      this.pump()
+    })
+  }
+
+  private pump() {
+    if (!this.booted || this.busy || !this.queued) return
+    const next = this.queued
+    this.queued = null
+    this.busy = true
+    this.job = { fen: next.fen, movetime: next.movetime, resolve: next.resolve }
+    if (next.elo === this.elo) {
+      this.go()
+      return
+    }
+    this.elo = next.elo
+    this.worker?.postMessage(`setoption name UCI_LimitStrength value ${next.elo == null ? "false" : "true"}`)
+    if (next.elo != null) this.worker?.postMessage(`setoption name UCI_Elo value ${next.elo}`)
+    this.afterReady = () => this.go()
+    this.worker?.postMessage("isready")
+  }
+
+  private go() {
+    if (!this.job) return
+    this.worker?.postMessage(`position fen ${this.job.fen}`)
+    this.worker?.postMessage(`go movetime ${this.job.movetime}`)
+  }
+
+  private onLine(line: string) {
+    if (line === "uciok") {
+      this.worker?.postMessage("isready")
+      return
+    }
+    if (line === "readyok") {
+      if (!this.booted) {
+        this.booted = true
+        this.pump()
+        return
+      }
+      const resume = this.afterReady
+      this.afterReady = null
+      resume?.()
+      return
+    }
+    if (!line.startsWith("bestmove") || !this.job) return
+    const uci = line.split(/\s+/)[1] ?? ""
+    const job = this.job
+    this.job = null
+    this.busy = false
+    if (uci.length < 4 || uci === "(none)") job.resolve(null)
+    else job.resolve({ from: uci.slice(0, 2), to: uci.slice(2, 4), promotion: uci[4] })
+    this.pump()
+  }
+
+  private fail() {
+    this.job?.resolve(null)
+    this.queued?.resolve(null)
+    this.job = null
+    this.queued = null
+    this.busy = false
+    this.worker?.terminate()
+    this.worker = null
+    if (player === this) player = null
+  }
+}
+
+let player: Player | null = null
+
+export function askStockfish(fen: string, elo: number | null, movetime: number): Promise<StockfishMove | null> {
+  if (typeof Worker === "undefined") return Promise.resolve(null)
+  player ??= new Player()
+  return player.ask(fen, elo, movetime)
+}

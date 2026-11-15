@@ -2,7 +2,7 @@ import { Chess, type Color } from "chess.js"
 import { ArrowDownUp, Flag, Lightbulb, RotateCcw, Undo2, Volume2, VolumeX } from "lucide-react"
 import { type ReactNode, useEffect, useState } from "react"
 import { askEngine } from "@/chess/engine-client"
-import { LEVELS, type LevelId } from "@/chess/levels"
+import { FISH_LEVELS, LEVELS, type FishLevelId, type LevelId, type OpponentId } from "@/chess/levels"
 import { bookMoves, matchOpening, OPENINGS } from "@/chess/openings"
 import { capturedBy, formatClock, materialForWhite, sideToMove } from "@/chess/rules"
 import { setMuted, unlockAudio } from "@/chess/sound"
@@ -10,7 +10,7 @@ import { useGame, type Mode } from "@/chess/store"
 import { Board } from "@/components/board"
 import { PieceSvg } from "@/components/piece"
 import { StockfishBar, StockfishPanel, useStockfishPreference } from "@/components/stockfish"
-import { useStockfish } from "@/chess/stockfish"
+import { askStockfish, useStockfish } from "@/chess/stockfish"
 
 const SAVE_KEY = "ply-table-v1"
 
@@ -34,6 +34,8 @@ export function PlyApp() {
   const mode = useGame((s) => s.mode)
   const humanColor = useGame((s) => s.humanColor)
   const level = useGame((s) => s.level)
+  const opponent = useGame((s) => s.opponent)
+  const fishLevel = useGame((s) => s.fishLevel)
   const mute = useGame((s) => s.mute)
   const orientation = useGame((s) => s.orientation)
   const fish = useStockfishPreference()
@@ -57,6 +59,8 @@ export function PlyApp() {
             mode: state.mode,
             humanColor: state.humanColor,
             level: state.level,
+            opponent: state.opponent,
+            fishLevel: state.fishLevel,
             minutes: state.minutes,
             autoFlip: state.autoFlip,
             mute: state.mute,
@@ -98,12 +102,17 @@ export function PlyApp() {
     let cancelled = false
     useGame.setState({ status: "thinking", selected: null, pending: null })
     const spec = LEVELS[state.level]
-    void askEngine(current, {
-      depth: spec.depth,
-      movetime: spec.movetime,
-      noise: spec.noise,
-      book: true,
-    }).then((move) => {
+    const fish = FISH_LEVELS[state.fishLevel]
+    const pending =
+      state.opponent === "stockfish"
+        ? askStockfish(current, fish.elo, fish.movetime)
+        : askEngine(current, {
+            depth: spec.depth,
+            movetime: spec.movetime,
+            noise: spec.noise,
+            book: true,
+          })
+    void pending.then((move) => {
       if (cancelled) return
       const next = useGame.getState()
       if (next.nodes[next.index]?.fen !== current) return
@@ -120,7 +129,7 @@ export function PlyApp() {
         useGame.setState({ status: "playing" })
       }
     }
-  }, [booted, mode, humanColor, level, index, fen])
+  }, [booted, mode, humanColor, level, opponent, fishLevel, index, fen])
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
@@ -231,8 +240,17 @@ function PlayerBar({ place }: { place: "top" | "bottom" }) {
   const delta = color === "w" ? ahead : -ahead
   const active = status !== "gameover" && turn === color
   const thinking = status === "thinking" && mode === "engine" && color !== humanColor && active
+  const opponent = useGame((s) => s.opponent)
   const name =
-    mode === "engine" ? (color === humanColor ? "You" : "Engine") : color === "w" ? "White" : "Black"
+    mode === "engine"
+      ? color === humanColor
+        ? "You"
+        : opponent === "stockfish"
+          ? "Stockfish"
+          : "Engine"
+      : color === "w"
+        ? "White"
+        : "Black"
 
   return (
     <div className={`flex h-11 items-center justify-between gap-3 ${active ? "text-fg" : "text-muted"}`}>
@@ -288,6 +306,7 @@ function StatusLine() {
   const fen = useGame((s) => s.nodes[s.index]?.fen ?? "")
   const mode = useGame((s) => s.mode)
   const human = useGame((s) => s.humanColor)
+  const opponent = useGame((s) => s.opponent)
   const status = useGame((s) => s.status)
   const result = useGame((s) => s.result)
   const turn = sideToMove(fen)
@@ -300,7 +319,8 @@ function StatusLine() {
   })()
   let text = turn === "w" ? "White to move" : "Black to move"
   if (result) text = result.detail
-  else if (status === "thinking" && mode === "engine" && turn !== human) text = "Engine is thinking"
+  else if (status === "thinking" && mode === "engine" && turn !== human)
+    text = opponent === "stockfish" ? "Stockfish is thinking" : "Engine is thinking"
   else if (status === "thinking") text = "Looking ahead"
   else if (inCheck) text = turn === "w" ? "White is in check" : "Black is in check"
   else if (mode === "engine" && turn === human) text = "Your move"
@@ -473,11 +493,15 @@ function TableSettings() {
   const mode = useGame((s) => s.mode)
   const human = useGame((s) => s.humanColor)
   const level = useGame((s) => s.level)
+  const opponent = useGame((s) => s.opponent)
+  const fishLevel = useGame((s) => s.fishLevel)
   const minutes = useGame((s) => s.minutes)
   const autoFlip = useGame((s) => s.autoFlip)
   const blurb =
     mode === "engine"
-      ? "You play one color. The engine takes the other."
+      ? opponent === "stockfish"
+        ? "You play one color. Stockfish takes the other."
+        : "You play one color. The built-in engine takes the other."
       : mode === "pass"
         ? "Same screen. The board can turn after each move."
         : "Move either color. Hint asks the engine without playing."
@@ -507,10 +531,29 @@ function TableSettings() {
       ) : null}
       {mode === "engine" ? (
         <Choice
+          label="Opponent"
+          value={opponent}
+          options={[
+            { id: "stockfish" as OpponentId, label: "Stockfish" },
+            { id: "ply" as OpponentId, label: "Built-in" },
+          ]}
+          onChange={(id) => useGame.getState().setOpponent(id)}
+        />
+      ) : null}
+      {mode === "engine" && opponent === "ply" ? (
+        <Choice
           label="Strength"
           value={level}
           options={(Object.keys(LEVELS) as LevelId[]).map((id) => ({ id, label: LEVELS[id].label }))}
           onChange={(id) => useGame.getState().setLevel(id)}
+        />
+      ) : null}
+      {mode === "engine" && opponent === "stockfish" ? (
+        <Choice
+          label="Strength"
+          value={fishLevel}
+          options={(Object.keys(FISH_LEVELS) as FishLevelId[]).map((id) => ({ id, label: FISH_LEVELS[id].label }))}
+          onChange={(id) => useGame.getState().setFishLevel(id)}
         />
       ) : null}
       {mode !== "study" ? (
@@ -536,7 +579,11 @@ function TableSettings() {
         </button>
       ) : null}
       <p className="text-xs text-faint">
-        {mode === "engine" ? `${LEVELS[level].detail}. The engine follows the opening book, then searches. ` : ""}
+        {mode === "engine"
+          ? opponent === "stockfish"
+            ? `${FISH_LEVELS[fishLevel].detail}. Stockfish plays its own moves. Turn the analysis panel off for a serious game. `
+            : `${LEVELS[level].detail}. The built-in engine follows the opening book, then searches. `
+          : ""}
         Side, clock, and table start a new game. An opening from the book loads in Study.
       </p>
       <button

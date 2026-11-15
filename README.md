@@ -1,20 +1,20 @@
 # Ply
 
-Hybrid chess in the browser. One board, three tables: you against the engine, two people on the same screen, or a study board for a line from the opening book.
+Hybrid chess in the browser. One board, three tables: you against Stockfish or the built-in engine, two people on the same screen, or a study board for a line from the opening book.
 
-![Ply on a desktop, Italian opening in Study](docs/screenshots/desktop.png)
+![Ply on a desktop, a game against Stockfish](docs/screenshots/desktop.png)
 
-The rules come from [chess.js](https://github.com/jhlywa/chess.js). The opponent is a small alpha-beta engine in a web worker, and it plays the first moves from a named opening book of 87 lines. Nothing is sent to a server. The game lives in this browser.
+The rules come from [chess.js](https://github.com/jhlywa/chess.js). Stockfish 19 lite plays in the browser, and a smaller alpha-beta engine is there when you want a faster opponent that follows the opening book. Nothing is sent to a server. The game lives in this browser.
 
 ## Tables
 
 | Table | What you can do |
 | --- | --- |
-| Engine | Take White or Black. Casual, Club, or Sharp. |
+| Engine | Take White or Black against Stockfish or the built-in engine. |
 | Two players | Pass the screen. The board can turn after each move. |
-| Study | Move either color. Hint asks the engine and does not play. |
+| Study | Move either color. Hint asks the built-in engine and does not play. |
 
-Clocks are off, or 5, 10, or 15 minutes. Undo, flip, hint, and resign sit under the board. Tap a ply in the move list to jump there, or copy the position as FEN. Stockfish 19 scores the position beside the board: an evaluation bar, a graph of the game, and three best lines. It does not play the moves. The [engine guide](docs/engine.md#stockfish-visualiser) explains the switch.
+Clocks are off, or 5, 10, or 15 minutes. Undo, flip, hint, and resign sit under the board. Tap a ply in the move list to jump there, or copy the position as FEN. Stockfish also scores the position: an evaluation bar, a graph, and three best lines. Turn that panel off when you want a serious game. The [engine guide](docs/engine.md#stockfish) explains both.
 
 ![Ply on a phone](docs/screenshots/mobile.png)
 
