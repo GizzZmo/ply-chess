@@ -1,0 +1,17 @@
+node_modules/
+dist/
+.output/
+.vercel/
+.tanstack/
+artifacts/
+/screenshots/
+*.log
+.env
+.env.*
+.DS_Store
+.node_modules.lock
+
+# App Builder sandbox internals. Keep the auth flag so local dev matches the game.
+.grok/*
+!.grok/app-env.json
+AGENTS.md
