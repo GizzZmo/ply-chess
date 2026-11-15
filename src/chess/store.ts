@@ -60,6 +60,7 @@ type Game = {
   flag: (color: Color) => void
   hintMove: () => Promise<void>
   applyEngine: (from: string, to: string, promotion?: string) => void
+  loadOpening: (moves: readonly string[]) => void
   hydrate: (data: unknown) => void
   boot: () => void
 }
@@ -339,6 +340,37 @@ export const useGame = create<Game>((set, get) => ({
     const chess = new Chess(fen)
     if (chess.turn() === state.humanColor) return
     applyMove(set, get, from, to, promotion)
+  },
+
+  loadOpening: (moves) => {
+    const minutes = get().minutes
+    const ms = minutes * 60_000
+    const chess = new Chess()
+    const nodes: HistNode[] = [{ fen: chess.fen(), san: null, clocks: { w: ms, b: ms } }]
+    for (const san of moves) {
+      let move
+      try {
+        move = chess.move(san)
+      } catch {
+        move = null
+      }
+      if (!move) break
+      nodes.push({ fen: chess.fen(), san: move.san, from: move.from, to: move.to, clocks: { w: ms, b: ms } })
+    }
+    set({
+      mode: "study",
+      nodes,
+      index: nodes.length - 1,
+      orientation: "w",
+      selected: null,
+      pending: null,
+      hint: null,
+      status: "playing",
+      result: null,
+      confirmResign: false,
+      turnStartedAt: null,
+      autoFlip: get().autoFlip,
+    })
   },
 
   hydrate: (data) => {

@@ -1,4 +1,5 @@
 import { Chess, type Move, type PieceSymbol } from "chess.js"
+import { bookMove } from "./openings"
 import type { EngineMove, SearchOpts } from "./types"
 
 const VAL: Record<PieceSymbol, number> = {
@@ -86,9 +87,6 @@ const KING_EG = flat([
   [-30, -30, 0, 0, 0, 0, -30, -30],
   [-50, -30, -30, -30, -30, -30, -30, -50],
 ])
-
-const BOOK = ["e4", "d4", "Nf3", "c4"]
-const START = "rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w"
 
 class TimeUp extends Error {
   constructor() {
@@ -237,12 +235,11 @@ export function findBestMove(fen: string, opts: SearchOpts): EngineMove | null {
     return null
   }
 
-  if (opts.book && fen.startsWith(START)) {
-    const san = BOOK[Math.floor(Math.random() * BOOK.length)] ?? "e4"
-    try {
-      return toEngine(chess.move(san))
-    } catch {
-      chess = new Chess(fen)
+  if (opts.book) {
+    const leaveBook = opts.noise > 0 && Math.random() < 0.35
+    if (!leaveBook) {
+      const booked = bookMove(fen)
+      if (booked) return booked
     }
   }
 

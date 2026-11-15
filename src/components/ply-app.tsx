@@ -3,6 +3,7 @@ import { ArrowDownUp, Flag, Lightbulb, RotateCcw, Undo2, Volume2, VolumeX } from
 import { type ReactNode, useEffect, useState } from "react"
 import { askEngine } from "@/chess/engine-client"
 import { LEVELS, type LevelId } from "@/chess/levels"
+import { bookMoves, matchOpening, OPENINGS } from "@/chess/openings"
 import { capturedBy, formatClock, materialForWhite, sideToMove } from "@/chess/rules"
 import { setMuted, unlockAudio } from "@/chess/sound"
 import { useGame, type Mode } from "@/chess/store"
@@ -165,12 +166,14 @@ export function PlyApp() {
             <Board />
             <PlayerBar place="bottom" />
             <StatusLine />
+            <OpeningName />
             <ResultCard />
             <Actions />
           </div>
         </section>
         <aside className="panel-scroll flex flex-col gap-4 rounded-xl bg-elevated p-4">
           <TableSettings />
+          <Openings />
           <MoveList />
         </aside>
       </main>
@@ -274,6 +277,88 @@ function StatusLine() {
     <p className="text-center text-sm text-muted" aria-live="polite">
       {text}
     </p>
+  )
+}
+
+function OpeningName() {
+  const index = useGame((s) => s.index)
+  const nodes = useGame((s) => s.nodes)
+  const sans: string[] = []
+  for (let i = 1; i <= index; i++) {
+    const san = nodes[i]?.san
+    if (san) sans.push(san)
+  }
+  const opening = matchOpening(sans)
+  const fen = nodes[index]?.fen ?? ""
+  const replies = bookMoves(fen)
+  if (!opening && replies.length === 0) return null
+  return (
+    <div className="text-center">
+      {opening ? (
+        <p className="font-display text-lg leading-tight">
+          {opening.name}
+          <span className="ml-2 font-sans text-xs text-faint">{opening.eco}</span>
+        </p>
+      ) : (
+        <p className="text-sm text-muted">Out of book</p>
+      )}
+      {replies.length > 0 ? <p className="mt-1 text-xs text-faint">Book · {replies.join("  ")}</p> : null}
+    </div>
+  )
+}
+
+function Openings() {
+  const [query, setQuery] = useState("")
+  const index = useGame((s) => s.index)
+  const nodes = useGame((s) => s.nodes)
+  const needle = query.trim().toLowerCase()
+  const sans: string[] = []
+  for (let i = 1; i <= index; i++) {
+    const san = nodes[i]?.san
+    if (san) sans.push(san)
+  }
+  const current = matchOpening(sans)
+  const lines = OPENINGS.filter((line) => {
+    if (!needle) return line.moves.length > 1
+    const blob = `${line.eco} ${line.name} ${line.moves.join(" ")}`.toLowerCase()
+    return blob.includes(needle)
+  }).sort((a, b) => a.name.localeCompare(b.name))
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex items-baseline justify-between gap-3">
+        <h2 className="text-sm font-medium">Openings</h2>
+        <span className="text-xs text-faint">{OPENINGS.length} lines</span>
+      </div>
+      <input
+        value={query}
+        onChange={(event) => setQuery(event.target.value)}
+        placeholder="Search the book"
+        aria-label="Search openings"
+        className="h-11 rounded-md bg-subtle px-3 text-sm text-fg outline-none placeholder:text-faint"
+      />
+      <ul className="max-h-52 overflow-auto">
+        {lines.length === 0 ? <li className="px-2 py-2 text-sm text-muted">No matching opening.</li> : null}
+        {lines.map((line) => {
+          const on = current?.name === line.name && current.moves.length === line.moves.length
+          return (
+            <li key={`${line.eco}-${line.name}`}>
+              <button
+                type="button"
+                onClick={() => useGame.getState().loadOpening(line.moves)}
+                className={`flex w-full flex-col items-start rounded-md px-2 py-2 text-left ${on ? "bg-subtle" : ""}`}
+              >
+                <span className="text-sm">
+                  {line.name}
+                  <span className="ml-2 text-xs text-faint">{line.eco}</span>
+                </span>
+                <span className="text-xs text-muted">{line.moves.join(" ")}</span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+    </div>
   )
 }
 
@@ -420,8 +505,8 @@ function TableSettings() {
         </button>
       ) : null}
       <p className="text-xs text-faint">
-        {mode === "engine" ? `${LEVELS[level].detail}. ` : ""}
-        Side, clock, and table start a new game. Strength changes on the next engine move.
+        {mode === "engine" ? `${LEVELS[level].detail}. The engine follows the opening book, then searches. ` : ""}
+        Side, clock, and table start a new game. An opening from the book loads in Study.
       </p>
       <button
         type="button"
