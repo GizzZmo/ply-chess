@@ -9,6 +9,8 @@ import { setMuted, unlockAudio } from "@/chess/sound"
 import { useGame, type Mode } from "@/chess/store"
 import { Board } from "@/components/board"
 import { PieceSvg } from "@/components/piece"
+import { StockfishBar, StockfishPanel, useStockfishPreference } from "@/components/stockfish"
+import { useStockfish } from "@/chess/stockfish"
 
 const SAVE_KEY = "ply-table-v1"
 
@@ -33,6 +35,13 @@ export function PlyApp() {
   const humanColor = useGame((s) => s.humanColor)
   const level = useGame((s) => s.level)
   const mute = useGame((s) => s.mute)
+  const orientation = useGame((s) => s.orientation)
+  const fish = useStockfishPreference()
+  const analysis = useStockfish(fen, fish.enabled, fish.depth)
+  const bestLine = analysis.lines.find((line) => line.multipv === 1) ?? null
+  const arrow = bestLine?.pvUci[0]
+    ? { from: bestLine.pvUci[0].slice(0, 2), to: bestLine.pvUci[0].slice(2, 4) }
+    : null
 
   useEffect(() => {
     const unsub = useGame.subscribe((state) => {
@@ -162,9 +171,24 @@ export function PlyApp() {
       <main className="mx-auto grid w-full max-w-6xl gap-6 px-4 lg:grid-cols-[minmax(0,1fr)_22rem] lg:items-start lg:px-6">
         <section className="flex flex-col items-center gap-3">
           <div className="board-size flex flex-col gap-2">
-            <PlayerBar place="top" />
-            <Board />
-            <PlayerBar place="bottom" />
+            <div className="flex gap-1.5">
+              {fish.enabled ? <div className="w-3 shrink-0" aria-hidden /> : null}
+              <div className="min-w-0 flex-1">
+                <PlayerBar place="top" />
+              </div>
+            </div>
+            <div className="flex items-stretch gap-1.5">
+              <StockfishBar enabled={fish.enabled} line={bestLine} orientation={orientation} />
+              <div className="min-w-0 flex-1">
+                <Board arrow={fish.enabled ? arrow : null} />
+              </div>
+            </div>
+            <div className="flex gap-1.5">
+              {fish.enabled ? <div className="w-3 shrink-0" aria-hidden /> : null}
+              <div className="min-w-0 flex-1">
+                <PlayerBar place="bottom" />
+              </div>
+            </div>
             <StatusLine />
             <OpeningName />
             <ResultCard />
@@ -173,6 +197,13 @@ export function PlyApp() {
         </section>
         <aside className="panel-scroll flex flex-col gap-4 rounded-xl bg-elevated p-4">
           <TableSettings />
+          <StockfishPanel
+            enabled={fish.enabled}
+            depth={fish.depth}
+            onEnabled={fish.setEnabled}
+            onDepth={fish.setDepth}
+            analysis={analysis}
+          />
           <Openings />
           <MoveList />
         </aside>

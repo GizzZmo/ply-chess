@@ -43,6 +43,10 @@ Time already used on the current turn is stored with the move, so undo and jumpi
 
 The move list is the whole game. The highlighted ply is the one on the board. **Copy position** copies the current FEN.
 
+## Stockfish
+
+Turn **Stockfish** on in the side panel. A bar appears beside the board. The number is from White’s point of view (`+0.39` is a small White edge, `+M3` is mate in three). Three lines show the moves Stockfish is considering. Tap one to play its first move, if it is your turn. Depth 10 is faster, 18 looks further. The graph fills in as you play, once at least two positions have a score. Hint replaces the faint arrow with your hint arrow.
+
 ## Who is who
 
 In Engine the bars say **You** and **Engine**. In the other tables they say **White** and **Black**. Captured pieces sit next to the side that took them, and a small `+n` is the material lead in pawn units (queen 9, rook 5, bishop 3, knight 3, pawn 1).

@@ -14,7 +14,7 @@ The rules come from [chess.js](https://github.com/jhlywa/chess.js). The opponent
 | Two players | Pass the screen. The board can turn after each move. |
 | Study | Move either color. Hint asks the engine and does not play. |
 
-Clocks are off, or 5, 10, or 15 minutes. Undo, flip, hint, and resign sit under the board. Tap a ply in the move list to jump there, or copy the position as FEN.
+Clocks are off, or 5, 10, or 15 minutes. Undo, flip, hint, and resign sit under the board. Tap a ply in the move list to jump there, or copy the position as FEN. Stockfish 19 scores the position beside the board: an evaluation bar, a graph of the game, and three best lines. It does not play the moves. The [engine guide](docs/engine.md#stockfish-visualiser) explains the switch.
 
 ![Ply on a phone](docs/screenshots/mobile.png)
 

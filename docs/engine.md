@@ -50,6 +50,11 @@ Casual also adds noise after the search. Moves within 150 centipawns of the best
 
 The UI label is the level name. The detail line under the controls (“Fast, uneven”, “Looks ahead”, “Deeper search”) comes from the same table in `src/chess/levels.ts`.
 
-## What it will not do
+## Stockfish visualiser
 
-It does not use an endgame tablebase, an opening file such as Polyglot, or a remote engine. It does not ponder on your time. It does not resign on its own. When its clock hits zero it loses on time, same as you.
+Beside the board, a separate Stockfish 19 lite engine (single-threaded WebAssembly, GPL-3.0) scores the position. It does not play the game. The in-app engine still makes the Engine-table moves.
+
+The bar is White’s share of the evaluation, flipped so the color at the bottom of the board owns the bottom of the bar. The number is centipawns from White’s side, or a mate score (`+M3`). Three lines update live. Tap a line to play its first move, when that move is legal for you. A soft arrow marks the best move’s destination until you ask for a hint, which replaces it.
+
+Depth is 10, 14, or 18. The choice and the on/off switch are stored in this browser under `ply-stockfish-v1`. The engine file is `public/stockfish/`, with the license in `COPYING.txt`.
+

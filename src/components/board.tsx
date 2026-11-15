@@ -16,7 +16,7 @@ const PIECE_NAME: Record<PieceSymbol, string> = {
 
 type Ghost = { x: number; y: number; size: number; type: PieceSymbol; color: Color; from: Square }
 
-export function Board() {
+export function Board({ arrow }: { arrow?: { from: string; to: string } | null }) {
   const fen = useGame((s) => s.nodes[s.index]?.fen ?? "")
   const orientation = useGame((s) => s.orientation)
   const selected = useGame((s) => s.selected)
@@ -151,7 +151,11 @@ export function Board() {
             )
           }),
         )}
-        {hint ? <HintArrow from={hint.from} to={hint.to} orientation={orientation} /> : null}
+        {hint ? (
+          <HintArrow from={hint.from} to={hint.to} orientation={orientation} />
+        ) : arrow ? (
+          <HintArrow from={arrow.from} to={arrow.to} orientation={orientation} tone="soft" />
+        ) : null}
       </div>
       {ghost ? (
         <div
@@ -206,9 +210,20 @@ export function Board() {
   )
 }
 
-function HintArrow({ from, to, orientation }: { from: string; to: string; orientation: Color }) {
+function HintArrow({
+  from,
+  to,
+  orientation,
+  tone = "hint",
+}: {
+  from: string
+  to: string
+  orientation: Color
+  tone?: "hint" | "soft"
+}) {
   const a = center(from, orientation)
   const b = center(to, orientation)
+  const stroke = tone === "soft" ? "var(--color-accent)" : "var(--color-fg)"
   return (
     <svg className="pointer-events-none absolute inset-0 h-full w-full" viewBox="0 0 100 100" aria-hidden>
       <line
@@ -216,11 +231,12 @@ function HintArrow({ from, to, orientation }: { from: string; to: string; orient
         y1={a.y}
         x2={b.x}
         y2={b.y}
-        stroke="var(--color-fg)"
-        strokeWidth="1.5"
+        stroke={stroke}
+        strokeWidth={tone === "soft" ? "1.25" : "1.5"}
         strokeLinecap="round"
+        opacity={tone === "soft" ? 0.85 : 1}
       />
-      <circle cx={b.x} cy={b.y} r="2.1" fill="none" stroke="var(--color-fg)" strokeWidth="1.2" />
+      <circle cx={b.x} cy={b.y} r="2.1" fill="none" stroke={stroke} strokeWidth="1.2" opacity={tone === "soft" ? 0.85 : 1} />
     </svg>
   )
 }
